@@ -235,6 +235,15 @@ html,body{height:100%;width:100%;background:var(--gd);color:var(--tx);font-famil
 /* MODALS */
 .mo{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);display:none;align-items:flex-end;justify-content:center}
 .mo.show{display:flex}
+
+/* API KEY BANNER */
+.ak-banner{margin:10px 14px 0;background:linear-gradient(135deg,rgba(224,122,48,.18),rgba(180,90,30,.12));border:1px solid rgba(224,122,48,.4);border-radius:14px;padding:11px 13px;display:none;align-items:center;gap:10px;cursor:pointer}
+.ak-banner.show{display:flex}
+.ak-banner-ico{font-size:20px;flex-shrink:0}
+.ak-banner-txt{flex:1}
+.ak-banner-title{font-size:11px;font-weight:700;color:#e8a050}
+.ak-banner-sub{font-size:9px;color:var(--td);margin-top:1px}
+.ak-banner-arr{color:var(--td);font-size:13px}
 .modal{background:var(--s1);border:1px solid var(--bdr);border-radius:24px 24px 0 0;padding:16px 16px calc(var(--sb) + 20px);width:100%;max-width:430px;max-height:90vh;overflow-y:auto;animation:mUp .35s cubic-bezier(.32,.72,0,1)}
 @keyframes mUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .mo-handle{width:36px;height:4px;background:var(--bdb);border-radius:2px;margin:0 auto 14px}
@@ -379,6 +388,7 @@ html,body{height:100%;width:100%;background:var(--gd);color:var(--tx);font-famil
     <div class="hdr-right">
       <div class="wpill" id="wpill" onclick="openWeightModal()">⚖️ <strong id="wdisp">210</strong> lbs</div>
       <div class="cpill">🎯 <strong id="hcr">2100</strong> cal</div>
+      <button onclick="openAkModal()" title="API Settings" style="background:none;border:none;cursor:pointer;font-size:15px;color:var(--td);padding:2px 0 2px 2px;line-height:1" id="ak-gear">⚙️</button>
     </div>
   </div>
 </div>
@@ -394,6 +404,14 @@ html,body{height:100%;width:100%;background:var(--gd);color:var(--tx);font-famil
         <div class="ci-banner-sub" id="ci-sub">Tap to log your breakfast</div>
       </div>
       <div class="ci-banner-arr">›</div>
+    </div>
+    <div class="ak-banner" id="ak-banner" onclick="openAkModal()">
+      <div class="ak-banner-ico">🔑</div>
+      <div class="ak-banner-txt">
+        <div class="ak-banner-title">AI Coach not connected</div>
+        <div class="ak-banner-sub">Tap to add your API key and unlock all features</div>
+      </div>
+      <div class="ak-banner-arr">›</div>
     </div>
     <div class="night-warn" id="night-warn">
       <div class="night-warn-t">🌙 9pm Protocol Active</div>
@@ -648,6 +666,20 @@ html,body{height:100%;width:100%;background:var(--gd);color:var(--tx);font-famil
   </div>
 </div>
 
+<!-- API KEY MODAL -->
+<div class="mo" id="ak-mo">
+  <div class="modal">
+    <div class="mo-handle"></div>
+    <div class="mo-title">Connect to AI Coach</div>
+    <div style="font-size:12px;color:var(--td);margin-bottom:14px;line-height:1.6">To enable AI coaching, food lookup, quotes, and weekly reviews, enter your Anthropic API key. It's stored only on this device.</div>
+    <div style="font-size:9px;font-weight:700;color:var(--gb);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Anthropic API Key</div>
+    <input id="ak-inp" class="log-inp" type="password" placeholder="sk-ant-…" style="width:100%;margin-bottom:8px" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div style="font-size:9px;color:var(--td);margin-bottom:14px">Get your key at console.anthropic.com → API Keys</div>
+    <button onclick="saveApiKey()" style="width:100%;background:var(--gm);border:none;border-radius:13px;padding:13px;color:#fff;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s">Save &amp; Connect</button>
+    <button onclick="closeAkModal()" style="width:100%;background:none;border:none;padding:10px;color:var(--tm);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:4px">Skip for now</button>
+  </div>
+</div>
+
 <script>
 // ── DATA ──────────────────────────────────────────────────
 const T={cal:2100,pro:210,carb:175,fat:62};
@@ -727,6 +759,44 @@ const CHECKINS=[
   {id:'evening',lbl:'Evening Check-in',ico:'🌆',cls:'eve',hour:20,slots:['Dinner','Evening Snack'],sub:'Log dinner and your evening snack'},
 ];
 
+// ── API KEY ───────────────────────────────────────────────
+let apiKey=localStorage.getItem('h_ak')||'';
+
+function apiHeaders(){
+  return{
+    "Content-Type":"application/json",
+    "anthropic-version":"2023-06-01",
+    "anthropic-dangerous-direct-browser-access":"true",
+    "x-api-key":apiKey
+  };
+}
+
+function openAkModal(){
+  const inp=document.getElementById('ak-inp');
+  inp.value=apiKey?'':'';
+  inp.placeholder=apiKey?'(key saved — paste new key to replace)':'sk-ant-…';
+  document.getElementById('ak-mo').classList.add('show');
+  setTimeout(()=>inp.focus(),400);
+}
+
+function closeAkModal(){document.getElementById('ak-mo').classList.remove('show')}
+
+function saveApiKey(){
+  const v=document.getElementById('ak-inp').value.trim();
+  if(!v){alert('Please paste your Anthropic API key.');return}
+  apiKey=v;
+  localStorage.setItem('h_ak',v);
+  updateAkBanner();
+  closeAkModal();
+}
+
+function updateAkBanner(){
+  const b=document.getElementById('ak-banner');
+  if(apiKey){b.classList.remove('show')}else{b.classList.add('show')}
+  const gear=document.getElementById('ak-gear');
+  if(gear){gear.style.opacity=apiKey?'0.5':'1';gear.style.color=apiKey?'var(--td)':'var(--org)'}
+}
+
 // ── STATE ─────────────────────────────────────────────────
 const TODAY=new Date().toDateString();
 let foodLog=JSON.parse(localStorage.getItem('h_fl')||'[]');
@@ -743,7 +813,8 @@ function switchScreen(n){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+n).classList.add('active');
-  document.getElementById('nav-'+n).classList.add('active');
+  const navEl=document.getElementById('nav-'+n);
+  if(navEl)navEl.classList.add('active');
 }
 
 // ── WEIGHT ────────────────────────────────────────────────
@@ -890,12 +961,13 @@ function addPre(i){addLog({...PRESETS[i]});document.getElementById('log-food').v
 
 async function openFoodModal(){
   const n=document.getElementById('log-food').value.trim();if(!n)return;
+  if(!apiKey){openAkModal();return}
   const mo=document.getElementById('food-mo');
   document.getElementById('food-mo-title').textContent=`Looking up "${n}"…`;
   document.getElementById('food-mo-content').innerHTML='<div class="typing" style="padding:10px 0"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
   mo.classList.add('show');
   try{
-    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:"Return ONLY valid JSON with: name(string),cal(number),pro(number grams protein),carb(number grams carbs),fat(number grams fat),ico(single food emoji),note(1 short sentence). No markdown, no extra text.",messages:[{role:"user",content:"Nutrition for standard serving of: "+n}]})});
+    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:apiHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:"Return ONLY valid JSON with: name(string),cal(number),pro(number grams protein),carb(number grams carbs),fat(number grams fat),ico(single food emoji),note(1 short sentence). No markdown, no extra text.",messages:[{role:"user",content:"Nutrition for standard serving of: "+n}]})});
     const d=await r.json();
     let f;try{f=JSON.parse(d.content[0].text.replace(/```json?|```/g,'').trim())}catch{throw new Error('parse')}
     const fs=JSON.stringify(f);
@@ -1049,9 +1121,13 @@ async function coach(txt){
   const tid='t'+Date.now();
   el.innerHTML+=`<div class="msg c" id="${tid}"><div class="msg-av">🌿</div><div class="msg-bub"><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div></div></div>`;
   el.scrollTop=el.scrollHeight;
+  if(!apiKey){
+    document.getElementById(tid).innerHTML=`<div class="msg-av">🌿</div><div class="msg-bub">No API key configured. Tap the ⚙️ button in the header to add your Anthropic API key.</div>`;
+    el.scrollTop=el.scrollHeight;return;
+  }
   convo.push({role:"user",content:txt});
   try{
-    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:SYS+"\n\n"+getCtx(),messages:convo})});
+    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:apiHeaders(),body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:SYS+"\n\n"+getCtx(),messages:convo})});
     const d=await r.json();
     const rep=d.content?.[0]?.text||"Sorry, couldn't get a response. Try again.";
     convo.push({role:"assistant",content:rep});
@@ -1079,6 +1155,7 @@ function mood(m,btn){
 document.getElementById('wmo').addEventListener('click',e=>{if(e.target===document.getElementById('wmo'))closeWeightModal()});
 document.getElementById('ci-mo').addEventListener('click',e=>{if(e.target===document.getElementById('ci-mo'))closeCheckinModal()});
 document.getElementById('food-mo').addEventListener('click',e=>{if(e.target===document.getElementById('food-mo'))closeFoodModal()});
+document.getElementById('ak-mo').addEventListener('click',e=>{if(e.target===document.getElementById('ak-mo'))closeAkModal()});
 
 // ── TIMED ALERTS ──────────────────────────────────────────
 function checkAlerts(){
@@ -1125,9 +1202,14 @@ async function loadQuote(force) {
   document.getElementById('quote-attr').textContent = '';
   const why = localStorage.getItem('h_why') || '';
   const whyContext = why ? ` The person's #1 motivation is: "${why}".` : '';
+  if(!apiKey){
+    const doy=Math.floor((new Date()-new Date(new Date().getFullYear(),0,0))/86400000);
+    renderQuote(FALLBACK_QUOTES[doy%FALLBACK_QUOTES.length]);
+    return;
+  }
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json"},
+      method:"POST", headers:apiHeaders(),
       body: JSON.stringify({
         model:"claude-sonnet-4-20250514", max_tokens:200,
         system:`Return ONLY valid JSON with two fields: "text" (the quote, under 25 words) and "attr" (author name or "Unknown"). No markdown, no extra text. Pick a quote relevant to health, discipline, fat loss, consistency, or personal transformation.${whyContext}`,
@@ -1440,9 +1522,15 @@ async function loadWeeklySummary() {
   const weightChange = sevenAgo ? (curW - sevenAgo.w).toFixed(1) : 'unknown';
   const weighed = hist.filter(h => { const d = new Date(h.date); const ago = new Date(); ago.setDate(ago.getDate()-6); return d >= ago; }).length;
 
+  if(!apiKey){
+    el.className='week-ai-text';
+    el.textContent='No API key configured. Tap ⚙️ in the header to add your Anthropic API key.';
+    btn.style.display='block';
+    return;
+  }
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json"},
+      method:"POST", headers:apiHeaders(),
       body: JSON.stringify({
         model:"claude-sonnet-4-20250514", max_tokens:400,
         system: SYS,
@@ -1462,6 +1550,7 @@ async function loadWeeklySummary() {
 }
 
 // ── INIT ──────────────────────────────────────────────────
+updateAkBanner();
 initHome();
 initWhyCard();
 loadQuote();
